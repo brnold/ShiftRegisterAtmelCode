@@ -55,15 +55,19 @@ int main(void)
 	
 	setupQueue(&receivedData);
 	setupQueue(&transmitData);
-	
+	DDRA = 0xFF;
+	//PINA = 0xFF;
 	//set up shiftregiers
-	shiftReg_init(&testShift,0, 1, 2, 3, 5);
+	shiftReg_init(&testShift, (char* volatile) &PORTA, 3, 2, 1, 4, 0);
 
 	USART0_Init(BAUD_PRESCALE);
 	sei();
 	/* Replace with your application code */
 	USART_Transmit('f'); //might not be needed anymore
-	testIdea(&testShift);
+
+	//testIdea(&testShift);
+	shiftReg_loadData(&testShift, 0xA5);
+	shiftReg_loadData(&testShift, 0xFF);
 	while (1) 
 	{
 		

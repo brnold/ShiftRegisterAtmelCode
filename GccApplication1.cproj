@@ -145,13 +145,13 @@
     <Compile Include="serial.c">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="ShiftRegister.h">
-      <SubType>compile</SubType>
-    </Compile>
     <Compile Include="main.c">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="ShiftRegister.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ShiftRegister.h">
       <SubType>compile</SubType>
     </Compile>
   </ItemGroup>
