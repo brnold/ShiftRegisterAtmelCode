@@ -3,6 +3,18 @@
  *
  * Created: 7/6/2016 12:48:39 PM
  *  Author: Benjamin Nold
+ *
+ * Use Case
+ * //Make a shiftReg Struct
+ * struct shiftReg example;
+
+ * //Initialize the struct
+ * setupQueue(&example);
+
+ * //Initialize the shift register, The last 5 char's are the pin numbers 
+ * //that you have the pins of the shift register connected to.
+ * shiftReg_init(&example, (char* volatile) &PORTA, 2, 1, 4, 3, 0);
+ * 
  */ 
 
 

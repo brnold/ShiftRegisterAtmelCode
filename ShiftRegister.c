@@ -12,7 +12,7 @@
  #include <util/delay.h>
 
 
- //fordebug
+ //fordebug, decrypt
  void testIdea(struct shiftReg *s){
  *s->port = 0x00;
  //*s->port |= (1 << s->SRCLK) | (1 << s->RCLK);
@@ -24,6 +24,9 @@
 
  }
 
+ /************************************************************************/
+ /* Clears the Shift Registers, but doesn't clear the output!            */
+ /************************************************************************/
  void shiftReg_Clear(struct shiftReg *s){
 	*s->port &= ~(1 << s->SRCLR);
 	//no op
@@ -31,6 +34,10 @@
 	*s->port |= (1 << s->SRCLR);
  }
 
+ /************************************************************************/
+ /* Takes in the address of the shift Reg Struct, port where the pins are*/ 
+ /* located, then the pin numbers for the shift register pins            */
+ /************************************************************************/
  void shiftReg_init(struct shiftReg *s, char volatile *port, char SRCLK, char RCLK, char OE, char SRCLR, char SER){
     s->port = port;
 	s->SRCLK = SRCLK;
@@ -45,7 +52,9 @@
 	//s->RCLK = 0;
 	//s->SRCLK = 0;	
  }
-
+ /************************************************************************/
+ /* Loads 8 bits into 1 shift register                          */
+ /************************************************************************/
  void shiftReg_loadData(struct shiftReg *s, unsigned char data){
 	char temp;
 	for(unsigned char c = 1; c < 0b10000000; c <<= 1){
@@ -76,6 +85,10 @@
 	//s->RCLK = 0;
 	//s->SRCLK = 0;
  } 
+
+ /************************************************************************/
+ /* Loads in 3*8 bits into 3 daisy chaned shift registers                */
+ /************************************************************************/
 
  void shiftReg_loadData3(struct shiftReg *s, unsigned char data[]){
  	char temp;
@@ -124,6 +137,10 @@
  	//s->SRCLK = 0;
  }
 
+  /************************************************************************/
+  /* Loads in 6*8 bits into 3 daisy chaned shift registers                */
+  /************************************************************************/
+
  void shiftReg_loadStops(struct shiftReg *s, unsigned char data[]){
   	char temp;
   	//so fully load in the first 2 bytes
@@ -156,7 +173,7 @@
   	}
   	*s->port &= ~(1 << s->SRCLK);
   	__builtin_avr_delay_cycles(1);
-  	temp = (data[5]&0x80) ? 1 : 0; //this would be amazing if it works!
+  	temp = (data[5]&0x80) ? 1 : 0; //this would be amazing if it works! It does!
   	if(temp == 1){
 	  	*s->port |= (1 << s->SER);
 	  	}else{
@@ -171,6 +188,9 @@
   	//s->SRCLK = 0;
  }
 
+ /************************************************************************/
+ /* For Testing out my PCB.                                              */
+ /************************************************************************/
  void flipStops(struct shiftReg *up, struct shiftReg *down){
 	unsigned char numRegisters=6;
 	unsigned char flipArray[numRegisters];
