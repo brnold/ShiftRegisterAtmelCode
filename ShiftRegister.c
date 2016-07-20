@@ -4,10 +4,13 @@
  * Created: 7/5/2016 5:25:43 AM
  *  Author: Benjamin Nold
  */ 
-
+ 
+ #define  F_CPU   16000000UL
  #include "ShiftRegister.h"
  #include "avr/builtins.h"
  #include <avr/io.h>
+ #include <util/delay.h>
+
 
  //fordebug
  void testIdea(struct shiftReg *s){
@@ -74,4 +77,139 @@
 	//s->SRCLK = 0;
  } 
 
+ void shiftReg_loadData3(struct shiftReg *s, unsigned char data[]){
+ 	char temp;
+ 	//so fully load in the first 2 bytes
+	for(unsigned char byteCount = 0; byteCount<2; byteCount++){
+		for(unsigned char c = 1; c; c <<= 1){
+	 		*s->port &= ~(1 << s->SRCLK);
+	 		__builtin_avr_delay_cycles(1);
+	 		temp = (data[byteCount]&c) ? 1 : 0; //this would be amazing if it works!
+	 		if(temp == 1){
+		 		*s->port |= (1 << s->SER);
+		 		}else{
+		 		*s->port &= ~(1 << s->SER);
+	 		}
+	 		*s->port |= (1 << s->SRCLK);
+	 		__builtin_avr_delay_cycles(1);
+ 		}
+	}
+	
+	for(unsigned char c = 1; c < 0b10000000; c <<= 1){
+	 	*s->port &= ~(1 << s->SRCLK);
+	 	__builtin_avr_delay_cycles(1);
+	 	temp = (data[2]&c) ? 1 : 0; //this would be amazing if it works!
+	 	if(temp == 1){
+		 	*s->port |= (1 << s->SER);
+		 	}else{
+		 	*s->port &= ~(1 << s->SER);
+	 	}
+	 	*s->port |= (1 << s->SRCLK);
+	 	__builtin_avr_delay_cycles(1);
+ 	}
+ 	*s->port &= ~(1 << s->SRCLK);
+ 	__builtin_avr_delay_cycles(1);
+ 	temp = (data[2]&0x80) ? 1 : 0; //this would be amazing if it works!
+ 	if(temp == 1){
+	 	*s->port |= (1 << s->SER);
+	 	}else{
+	 	*s->port &= ~(1 << s->SER);
+ 	}
+ 	*s->port |= (1 << s->SRCLK);
+ 	*s->port |= (1 << s->RCLK);
+ 	//s->RCLK = 1;
+ 	__builtin_avr_delay_cycles(1);
+ 	*s->port &= ~((1 << s->SRCLK) | (1 << s->RCLK));
+ 	//s->RCLK = 0;
+ 	//s->SRCLK = 0;
+ }
+
+ void shiftReg_loadStops(struct shiftReg *s, unsigned char data[]){
+  	char temp;
+  	//so fully load in the first 2 bytes
+  	for(unsigned char byteCount = 0; byteCount<5; byteCount++){
+	  	for(unsigned char c = 1; c; c <<= 1){
+		  	*s->port &= ~(1 << s->SRCLK);
+		  	__builtin_avr_delay_cycles(1);
+		  	temp = (data[byteCount]&c) ? 1 : 0; //this would be amazing if it works!
+		  	if(temp == 1){
+			  	*s->port |= (1 << s->SER);
+			  	}else{
+			  	*s->port &= ~(1 << s->SER);
+		  	}
+		  	*s->port |= (1 << s->SRCLK);
+		  	__builtin_avr_delay_cycles(1);
+	  	}
+  	}
+  	
+  	for(unsigned char c = 1; c < 0b10000000; c <<= 1){
+	  	*s->port &= ~(1 << s->SRCLK);
+	  	__builtin_avr_delay_cycles(1);
+	  	temp = (data[5]&c) ? 1 : 0; //this would be amazing if it works!
+	  	if(temp == 1){
+		  	*s->port |= (1 << s->SER);
+		  	}else{
+		  	*s->port &= ~(1 << s->SER);
+	  	}
+	  	*s->port |= (1 << s->SRCLK);
+	  	__builtin_avr_delay_cycles(1);
+  	}
+  	*s->port &= ~(1 << s->SRCLK);
+  	__builtin_avr_delay_cycles(1);
+  	temp = (data[5]&0x80) ? 1 : 0; //this would be amazing if it works!
+  	if(temp == 1){
+	  	*s->port |= (1 << s->SER);
+	  	}else{
+	  	*s->port &= ~(1 << s->SER);
+  	}
+  	*s->port |= (1 << s->SRCLK);
+  	*s->port |= (1 << s->RCLK);
+  	//s->RCLK = 1;
+  	__builtin_avr_delay_cycles(1);
+  	*s->port &= ~((1 << s->SRCLK) | (1 << s->RCLK));
+  	//s->RCLK = 0;
+  	//s->SRCLK = 0;
+ }
+
+ void flipStops(struct shiftReg *up, struct shiftReg *down){
+	unsigned char numRegisters=6;
+	unsigned char flipArray[numRegisters];
+	unsigned char flipArrayCleared[numRegisters];
+	//first clear out the array
+	for(unsigned char c = 0; c<=numRegisters; c++)
+	{
+		flipArray[c] = 0x00;
+		flipArrayCleared[c] = 0x00;
+	}
+
+	for(unsigned char regCount = 0; regCount<numRegisters; regCount++){
+		for(unsigned char c = 1; c; c <<= 1){
+			flipArray[regCount] = c;
+			shiftReg_loadStops(down, flipArray);
+			_delay_ms(SAM_WAIT_TIME);
+		}
+		flipArray[regCount] = 0x00;
+	}
+
+	shiftReg_loadStops(down, flipArrayCleared);
+	//shiftReg_Clear(down);
+
+	for(unsigned char c = 0; c<=numRegisters; c++)
+	{
+		flipArray[c] = 0x00;
+		flipArrayCleared[c] = 0x00;
+	}
+
+	for(unsigned char regCount = 0; regCount<numRegisters; regCount++){
+		for(unsigned char c = 1; c; c <<= 1){
+			flipArray[regCount] = c;
+			shiftReg_loadStops(up, flipArray);
+			_delay_ms(SAM_WAIT_TIME);
+		}
+		flipArray[regCount] = 0x00;
+	}
+
+	shiftReg_loadStops(up, flipArrayCleared);
+
+ }
 

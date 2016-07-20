@@ -17,12 +17,17 @@ struct shiftReg {
 	char volatile *port;
 };
 
+#define SAM_WAIT_TIME 75
+
 
 
 void shiftReg_Clear(struct shiftReg *s);
 void shiftReg_init(struct shiftReg *s, char volatile *port, char  SRCLK, char RCLK, char OE, char SRCLR, char SER);
 void shiftReg_loadData(struct shiftReg *s, unsigned char data);
 void testIdea(struct shiftReg *s);
+void shiftReg_loadData3(struct shiftReg *s, unsigned char data[]);
+void shiftReg_loadStops(struct shiftReg *s, unsigned char data[]);
+void flipStops(struct shiftReg *up, struct shiftReg *down);
 
 
 
