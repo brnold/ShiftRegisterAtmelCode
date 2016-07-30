@@ -24,7 +24,7 @@
 //#define SET_BIT(PORT_NR,BIT) (PORT_NR |= (1<<BIT))
 //#define CLEAR_BIT(PORT_NR,BIT) (PORT_NR &= ~(1<<BIT))
 
-struct shiftReg {
+struct shiftOutReg {
 	unsigned char SRCLK, RCLK, SRCLR, OE, SER;
 	char volatile *port;
 };
@@ -33,13 +33,16 @@ struct shiftReg {
 
 
 
-void shiftReg_Clear(struct shiftReg *s);
-void shiftReg_init(struct shiftReg *s, char volatile *port, char  SRCLK, char RCLK, char OE, char SRCLR, char SER);
-void shiftReg_loadData(struct shiftReg *s, unsigned char data);
-void testIdea(struct shiftReg *s);
-void shiftReg_loadData3(struct shiftReg *s, unsigned char data[]);
-void shiftReg_loadStops(struct shiftReg *s, unsigned char data[]);
-void flipStops(struct shiftReg *up, struct shiftReg *down);
+void shiftReg_Clear_Registers(struct shiftOutReg *s);
+void shiftReg_Clear_Output(struct shiftOutReg *s);
+void shiftReg_output_init(struct shiftOutReg *s, char volatile *port, char volatile *ddr, char  SRCLK, char RCLK, char OE, char SRCLR, char SER);
+void shiftReg_input_init(struct shiftOutReg *s, char volatile *port, char volatile *ddr, char  SRCLK, char RCLK, char OE, char SRCLR, char SER);
+void shiftReg_loadData(struct shiftOutReg *s, unsigned char data);
+unsigned char shiftReg_readData(struct shiftOutReg *s);
+void testIdea(struct shiftOutReg *s);
+void shiftReg_loadData3(struct shiftOutReg *s, unsigned char data[]);
+void shiftReg_loadStops(struct shiftOutReg *s, unsigned char data[]);
+void flipStops(struct shiftOutReg *up, struct shiftOutReg *down);
 
 
 

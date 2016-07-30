@@ -13,7 +13,7 @@
 
 
  //fordebug, decrypt
- void testIdea(struct shiftReg *s){
+ void testIdea(struct shiftOutReg *s){
  *s->port = 0x00;
  //*s->port |= (1 << s->SRCLK) | (1 << s->RCLK);
  //*s->port &= ~(1 << s->RCLK);
@@ -27,7 +27,7 @@
  /************************************************************************/
  /* Clears the Shift Registers, but doesn't clear the output!            */
  /************************************************************************/
- void shiftReg_Clear(struct shiftReg *s){
+ void shiftReg_Clear_Registers(struct shiftOutReg *s){
 	*s->port &= ~(1 << s->SRCLR);
 	//no op
 	__builtin_avr_delay_cycles(2);
@@ -35,27 +35,81 @@
  }
 
  /************************************************************************/
+ /* Clears the Shift Registers and sets the outputs to 0			     */
+ /************************************************************************/
+ void shiftReg_Clear_Output(struct shiftOutReg *s)
+ {
+	*s->port &= ~(1 << s->SRCLR);
+	//no op
+	__builtin_avr_delay_cycles(2);
+	*s->port |= (1 << s->SRCLR);
+	*s->port |= (1 << s->RCLK);
+	//s->RCLK = 1;
+	__builtin_avr_delay_cycles(1);
+	*s->port &= ~(1 << s->RCLK);
+ }
+
+ /************************************************************************/
+ /* Sets up the DDR registers and shftReg Struct for an output Shift Reg.*/
  /* Takes in the address of the shift Reg Struct, port where the pins are*/ 
  /* located, then the pin numbers for the shift register pins            */
  /************************************************************************/
- void shiftReg_init(struct shiftReg *s, char volatile *port, char SRCLK, char RCLK, char OE, char SRCLR, char SER){
-    s->port = port;
+ void shiftReg_output_init(struct shiftOutReg *s, char volatile *port, char volatile *ddr, 
+									char  SRCLK, char RCLK, char OE, char SRCLR, char SER)
+{
+    //Set up the DDR
+	*ddr |= (1 << SRCLK);
+	*ddr |= (1 << RCLK);
+	*ddr |= (1 << OE);
+	*ddr |= (1 << SRCLR);
+	*ddr |= (1 << SER);
+
+	//Setup struct
+	s->port = port;
 	s->SRCLK = SRCLK;
 	s->RCLK = RCLK;
 	s->OE = OE;
 	s->SRCLR = SRCLR;
 	s->SER = SER;
 
-	shiftReg_Clear(s); //Clear the shift reg
-	*s->port &= ~((1 << s->OE) | (1 << s->RCLK) | (1 << s->SRCLK));
-	//s->OE = 0; //set as output;
-	//s->RCLK = 0;
-	//s->SRCLK = 0;	
+	shiftReg_Clear_Registers(s); //Clear the shift reg
+	*s->port &= ~((1 << s->RCLK) | (1 << s->SRCLK));
+	*s->port != (1<< OE); //set ouputenable high
  }
+
+ /************************************************************************/
+ /* Sets up the DDR registers and shftReg Struct for an input Shift Reg. */
+ /* Takes in the address of the shift Reg Struct, port where the pins are*/
+ /* located, then the pin numbers for the shift register pins            */                                                       
+ /************************************************************************/
+
+ void shiftReg_input_init(struct shiftOutReg *s, char volatile *port, char volatile *ddr,
+									 char  SRCLK, char RCLK, char OE, char SRCLR, char SER)
+{
+	//Set up the DDR
+	*ddr |= (1 << SRCLK);
+	*ddr |= (1 << RCLK);
+	*ddr |= (1 << OE);
+	*ddr |= (1 << SRCLR);
+	*ddr &= ~(1 << SER);
+
+	//setup struct
+	s->port = port;
+	s->SRCLK = SRCLK;
+	s->RCLK = RCLK;
+	s->OE = OE;
+	s->SRCLR = SRCLR;
+	s->SER = SER;
+
+	shiftReg_Clear_Registers(s); //Clear the shift reg
+	*s->port &= ~((1 << s->OE) | (1 << s->RCLK) | (1 << s->SRCLK));
+}
+
+
  /************************************************************************/
  /* Loads 8 bits into 1 shift register                          */
  /************************************************************************/
- void shiftReg_loadData(struct shiftReg *s, unsigned char data){
+ void shiftReg_loadData(struct shiftOutReg *s, unsigned char data){
 	char temp;
 	for(unsigned char c = 1; c < 0b10000000; c <<= 1){
 		*s->port &= ~(1 << s->SRCLK);
@@ -90,7 +144,7 @@
  /* Loads in 3*8 bits into 3 daisy chaned shift registers                */
  /************************************************************************/
 
- void shiftReg_loadData3(struct shiftReg *s, unsigned char data[]){
+ void shiftReg_loadData3(struct shiftOutReg *s, unsigned char data[]){
  	char temp;
  	//so fully load in the first 2 bytes
 	for(unsigned char byteCount = 0; byteCount<2; byteCount++){
@@ -141,7 +195,7 @@
   /* Loads in 6*8 bits into 3 daisy chaned shift registers                */
   /************************************************************************/
 
- void shiftReg_loadStops(struct shiftReg *s, unsigned char data[]){
+ void shiftReg_loadStops(struct shiftOutReg *s, unsigned char data[]){
   	char temp;
   	//so fully load in the first 2 bytes
   	for(unsigned char byteCount = 0; byteCount<5; byteCount++){
@@ -191,7 +245,7 @@
  /************************************************************************/
  /* For Testing out my PCB.                                              */
  /************************************************************************/
- void flipStops(struct shiftReg *up, struct shiftReg *down){
+ void flipStops(struct shiftOutReg *up, struct shiftOutReg *down){
 	unsigned char numRegisters=6;
 	unsigned char flipArray[numRegisters];
 	unsigned char flipArrayCleared[numRegisters];
@@ -233,3 +287,8 @@
 
  }
 
+ unsigned char shiftReg_readData(struct shiftOutReg *s)
+ {
+	
+
+ }
