@@ -72,7 +72,7 @@
 	
 	for(unsigned char regCount = 0; regCount < NumRegisters; regCount++)
 	{
-
+		data[regCount] = 0;
 		count = 0;
 		for(unsigned char c = 1; c; c = c << 1){
 		
