@@ -41,8 +41,10 @@ void shiftReg_loadData(struct shiftOutReg *s, unsigned char data);
 unsigned char shiftReg_readData(struct shiftOutReg *s);
 void testIdea(struct shiftOutReg *s);
 void shiftReg_loadData3(struct shiftOutReg *s, unsigned char data[]);
+void shiftReg_loadShiftRegs(struct shiftOutReg *s, unsigned char data[]);
 void shiftReg_loadStops(struct shiftOutReg *s, unsigned char data[]);
 void flipStops(struct shiftOutReg *up, struct shiftOutReg *down);
+void testStubbornStop(struct shiftOutReg *up, struct shiftOutReg *down);
 
 
 

@@ -195,7 +195,7 @@
   /* Loads in 6*8 bits into 3 daisy chaned shift registers                */
   /************************************************************************/
 
- void shiftReg_loadStops(struct shiftOutReg *s, unsigned char data[]){
+ void shiftReg_loadShiftRegs(struct shiftOutReg *s, unsigned char data[]){
   	char temp;
   	//so fully load in the first 2 bytes
   	for(unsigned char byteCount = 0; byteCount<5; byteCount++){
@@ -242,6 +242,12 @@
   	//s->SRCLK = 0;
  }
 
+ void shiftReg_loadStops(struct shiftOutReg *s, unsigned char data[]){
+	shiftReg_loadShiftRegs(s, data);
+	_delay_ms(SAM_WAIT_TIME);
+	shiftReg_Clear_Output(s);
+ }
+
  /************************************************************************/
  /* For Testing out my PCB.                                              */
  /************************************************************************/
@@ -255,6 +261,10 @@
 		flipArray[c] = 0x00;
 		flipArrayCleared[c] = 0x00;
 	}
+
+	////Test that one stubborn stop
+
+
 
 	for(unsigned char regCount = 0; regCount<numRegisters; regCount++){
 		for(unsigned char c = 1; c; c <<= 1){
@@ -285,9 +295,44 @@
 
 	shiftReg_loadStops(up, flipArrayCleared);
 
+	
  }
 
- unsigned char shiftReg_readData(struct shiftOutReg *s)
+ void testStubbornStop(struct shiftOutReg *up, struct shiftOutReg *down){
+ 	unsigned char numRegisters=6;
+ 	unsigned char flipArray[numRegisters];
+ 	unsigned char flipArrayCleared[numRegisters];
+
+	for(unsigned char c = 0; c<=numRegisters; c++)
+	{
+		flipArray[c] = 0x00;
+		flipArrayCleared[c] = 0x00;
+	}
+	
+	shiftReg_Clear_Registers(up);
+	shiftReg_Clear_Registers(down);
+ 	flipArray[5] = 0xFF;
+ 	shiftReg_loadStops(down, flipArray);
+ 	_delay_ms(SAM_WAIT_TIME);
+ 	shiftReg_Clear_Output(down);
+ 	
+ 	_delay_ms(500);
+ 	_delay_ms(500);
+	_delay_ms(500);
+	_delay_ms(500);
+
+ 	shiftReg_loadStops(up, flipArray);
+ 	_delay_ms(SAM_WAIT_TIME);
+ 	shiftReg_Clear_Output(up);
+
+ 	
+ 	shiftReg_Clear_Registers(up);
+	shiftReg_Clear_Registers(down);
+
+
+ }
+
+ unsigned char shiftReg_decodeAndOutStops(unsigned ,struct shiftOutReg *up, struct shiftOutReg *up)
  {
 	
 

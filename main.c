@@ -30,8 +30,10 @@ void sendOutMidiStops(void);
 void midiCommandOut(char channel, char cmd, char pitch);
 
 //for the pistonScanner
-unsigned char previousPiston[] = {0, 0, 0};
-unsigned char currentPiston[] = {0, 0, 0};
+unsigned char previousPiston[] = {0, 0, 0,0};
+unsigned char currentPiston[] = {0, 0, 0,0};
+unsigned char pistonDiff;
+
 
 //for the stopScanner
 unsigned char previousStop[NUM_SHIFTIN_REG];
@@ -77,13 +79,16 @@ int main(void)
 
 	//For the KeyReader
 	DDRL = 0x00; //L is input
-	DDRA |= ~0b11100000; //5-7 is output to control the matrix
+	DDRD = 0x80; // D7 is in an output
+	DDRA |= 0b10100000; //5-7 is output to control the matrix
+	DDRA &= 0b10111111;
+	DDRG |= 0x02; //PORTG is 40, is input
 
 	
 	//set up shiftregiers
-	//shiftReg_output_init(&downReg, (char* volatile) &PORTA, (char* volatile)&PINA, 2, 1, 4, 3, 0);
+	shiftReg_output_init(&downReg, (char* volatile) &PORTA, (char* volatile)&PINA, 2, 1, 4, 3, 0);
 	
-	//shiftReg_output_init(&upReg, (char* volatile) &PORTC, (char* volatile)&PINC, 3, 0, 2, 5, 1);
+	shiftReg_output_init(&upReg, (char* volatile) &PORTC, (char* volatile)&PINC, 3, 0, 2, 5, 1);
 
 	shiftInReg_init(&stopReg, (char* volatile)&PORTC, (char* volatile)&PINC, (char* volatile)&DDRC, 4, 7, 6);
 
@@ -98,7 +103,9 @@ int main(void)
 	//_delay_ms(500);
 	//_delay_ms(500);
 //
-	//flipStops(&upReg, &downReg);
+	
+	testStubbornStop(&upReg, &downReg);
+	flipStops(&upReg, &downReg);
 	USART0_Transmit('b'); //test
 	//
 
@@ -107,7 +114,14 @@ int main(void)
 	//scan the shift in registers
 
 
-	sendOutMidiStops();
+	//sendOutMidiStops();
+
+	scanPistons();
+	USART0_Transmit(currentPiston[0]);
+	USART0_Transmit(currentPiston[1]);
+	USART0_Transmit(currentPiston[2]);
+	USART0_Transmit(currentPiston[3]);
+	USART0_Transmit(13); //end of line
 	_delay_ms(250);
 
 	//USART0_Transmit('a');
@@ -169,6 +183,14 @@ void midiCommandOut(char channel, char cmd, char pitch){
 	USART0_Transmit(_DEFAULTVELOCITY);
 }
 
+void decodeSAMs(void){
+	
+	while(isEmpty(&receivedData)){ //logic is crappy from the isEmpty
+
+		dequeue(&receivedData);
+
+	}
+}
 
 unsigned char previousShiftInStops[NUM_SHIFTIN_REG];
 
@@ -185,20 +207,36 @@ unsigned char previousShiftInStops[NUM_SHIFTIN_REG];
  void scanPistons(void){
 	unsigned char count = 0;
 	//turn on A7
-	PORTA |= PORTA & 0b10000000;
+	PORTD |= 0b10000000; //finding something
 	currentPiston[0] = PINL;
-	PORTA &= PORTA & 0b01111111;
+	PORTD &= 0b01111111;
 
-	PORTA |= PORTA & 0b00100000;
+	_delay_ms(1);
+	PORTA = PORTA | 0b00100000;
 	currentPiston[1] = PINL;
-	PORTA &= PORTA & 0b11011111;
+	PORTA = PORTA & 0b11011111;
+	_delay_ms(1);
+
+	PORTA |= 0b10000000;
+	currentPiston[2] = PINL;
+	if(PING1 == 1) //one button for sure
+	currentPiston[3] = currentPiston[3] |= 0x01;
+	else
+	currentPiston[3] = currentPiston[3] &= 0xFE;
+
+	if(PINA6 == 1)
+	currentPiston[3] = currentPiston[3] |= 0x02;
+	else
+	currentPiston[3] = currentPiston[3] &= 0b11111101;
+	PORTA &= 0b01111111;
+	_delay_ms(1);
 	//Store the other 2 buttons
-	currentPistron[2] = PINA
+
 
  }
 
  void sendOutMidiPistons(void){
-	
+	unsigned char otherCounter;
 	//compare to the previous pistons + send out at will.
 	for(int count = 0; count < 3; count++)
 	{
