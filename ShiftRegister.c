@@ -332,8 +332,8 @@
 
  }
 
- unsigned char shiftReg_decodeAndOutStops(unsigned ,struct shiftOutReg *up, struct shiftOutReg *up)
- {
-	
-
- }
+ //unsigned char shiftReg_decodeAndOutStops(unsigned ,struct shiftOutReg *up, struct shiftOutReg *up)
+ //{
+	//
+//
+ //}
