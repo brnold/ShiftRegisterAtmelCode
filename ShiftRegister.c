@@ -10,6 +10,7 @@
  #include "avr/builtins.h"
  #include <avr/io.h>
  #include <util/delay.h>
+ #include "globalDefines.h"
 
 
  //fordebug, decrypt
@@ -30,7 +31,7 @@
  void shiftReg_Clear_Registers(struct shiftOutReg *s){
 	*s->port &= ~(1 << s->SRCLR);
 	//no op
-	__builtin_avr_delay_cycles(2);
+	__builtin_avr_delay_cycles(1);
 	*s->port |= (1 << s->SRCLR);
  }
 
@@ -41,7 +42,7 @@
  {
 	*s->port &= ~(1 << s->SRCLR);
 	//no op
-	__builtin_avr_delay_cycles(2);
+	__builtin_avr_delay_cycles(1);
 	*s->port |= (1 << s->SRCLR);
 	*s->port |= (1 << s->RCLK);
 	//s->RCLK = 1;
@@ -192,13 +193,13 @@
  }
 
   /************************************************************************/
-  /* Loads in 6*8 bits into 3 daisy chaned shift registers                */
+  /* Loads in 6*8 bits into 6 daisy chaned shift registers                */
   /************************************************************************/
 
  void shiftReg_loadShiftRegs(struct shiftOutReg *s, unsigned char data[]){
   	char temp;
-  	//so fully load in the first 2 bytes
-  	for(unsigned char byteCount = 0; byteCount<5; byteCount++){
+  	//so fully load in the first 5 bytes
+  	for(unsigned char byteCount = 5; byteCount>0; byteCount--){
 	  	for(unsigned char c = 1; c; c <<= 1){
 		  	*s->port &= ~(1 << s->SRCLK);
 		  	__builtin_avr_delay_cycles(1);
@@ -216,7 +217,7 @@
   	for(unsigned char c = 1; c < 0b10000000; c <<= 1){
 	  	*s->port &= ~(1 << s->SRCLK);
 	  	__builtin_avr_delay_cycles(1);
-	  	temp = (data[5]&c) ? 1 : 0; //this would be amazing if it works!
+	  	temp = (data[0]&c) ? 1 : 0; //this would be amazing if it works!
 	  	if(temp == 1){
 		  	*s->port |= (1 << s->SER);
 		  	}else{
@@ -227,7 +228,7 @@
   	}
   	*s->port &= ~(1 << s->SRCLK);
   	__builtin_avr_delay_cycles(1);
-  	temp = (data[5]&0x80) ? 1 : 0; //this would be amazing if it works! It does!
+  	temp = (data[0]&0x80) ? 1 : 0; //this would be amazing if it works! It does!
   	if(temp == 1){
 	  	*s->port |= (1 << s->SER);
 	  	}else{
@@ -242,11 +243,63 @@
   	//s->SRCLK = 0;
  }
 
+//deprecated on 10/31/2020
  void shiftReg_loadStops(struct shiftOutReg *s, unsigned char data[]){
 	shiftReg_loadShiftRegs(s, data);
 	_delay_ms(SAM_WAIT_TIME);
 	shiftReg_Clear_Output(s);
  }
+ /************************************
+ - this should clear the stops
+ ************************************/
+ void clearStops(struct shiftOutReg *up, struct shiftOutReg *down){
+	unsigned char numRegisters=6;
+	unsigned char flipArray[numRegisters];
+	unsigned char flipArrayCleared[numRegisters];
+	//first clear out the array
+	for(unsigned char c = 0; c<=numRegisters; c++)
+	{
+		flipArray[c] = 0x00;
+		flipArrayCleared[c] = 0x00;
+	}
+
+	for(unsigned char regCount = 0; regCount<=numRegisters; regCount++){
+		for(unsigned char c = 1; c; c <<= 1){
+			flipArray[regCount] = c;
+			shiftReg_loadStops(up, flipArray);
+			//_delay_ms(SAM_WAIT_TIME);
+		}
+		flipArray[regCount] = 0x00;
+	}
+
+	shiftReg_loadStops(up, flipArrayCleared);
+
+ }
+
+
+ /************************************************************************/
+ /* This updates the SAMs based on what's on, and what want's to be on    */
+ /************************************************************************/
+void updateStops(struct shiftOutReg *up, struct shiftOutReg *down, unsigned char updatedSAM[]){
+	unsigned char numRegisters=6;
+	unsigned char zeros[6] ={0,0,0,0,0,0,0};
+	unsigned char toClear[NUM_SHIFTIN_REG],toSet[NUM_SHIFTIN_REG];
+	
+	for(unsigned char c = 0; c< NUM_SHIFTIN_REG; c++)
+	{
+		toClear[c] = ~updatedSAM[c];
+		toSet[c] = updatedSAM[c];
+	}
+
+	shiftReg_loadShiftRegs(up, toClear);
+	shiftReg_loadShiftRegs(down, updatedSAM);
+	_delay_ms(SAM_WAIT_TIME);
+	shiftReg_Clear_Output(up);
+	shiftReg_Clear_Output(down);
+
+
+	
+}
 
  /************************************************************************/
  /* For Testing out my PCB.                                              */
@@ -265,7 +318,6 @@
 	////Test that one stubborn stop
 
 
-
 	for(unsigned char regCount = 0; regCount<numRegisters; regCount++){
 		for(unsigned char c = 1; c; c <<= 1){
 			flipArray[regCount] = c;
@@ -278,7 +330,7 @@
 	shiftReg_loadStops(down, flipArrayCleared);
 	//shiftReg_Clear(down);
 
-	for(unsigned char c = 0; c<=numRegisters; c++)
+	for(unsigned char c = 0; c<numRegisters; c++)
 	{
 		flipArray[c] = 0x00;
 		flipArrayCleared[c] = 0x00;
@@ -332,8 +384,4 @@
 
  }
 
- //unsigned char shiftReg_decodeAndOutStops(unsigned ,struct shiftOutReg *up, struct shiftOutReg *up)
- //{
-	//
-//
- //}
+ 

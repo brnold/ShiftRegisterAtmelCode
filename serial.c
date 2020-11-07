@@ -13,7 +13,9 @@
 	 UBRR0H = (unsigned char)(baud>>8);
 	 UBRR0L = (unsigned char)baud;
 	 //enable receiver and tx, emable rx interrupt and Data Register Empty interrupt
-	 UCSR0B = (1 <<RXEN0)|(1<<TXEN0)|(1<<RXCIE0)|(1<<UDRIE0);
+	 //UCSR0B = (1 <<RXEN0)|(1<<TXEN0)|(1<<RXCIE0)|(1<<UDRIE0);
+	 //enable receiver and tx, emable rx interrupt and
+	 UCSR0B = (1 <<RXEN0)|(1<<TXEN0)|(1<<RXCIE0);
 	 //set frame format: 8data, 2stop bit
 	 //UCSR0C = (1 << USBS0)|(3<<UCSZ00);
 	 UCSR0C = (3<<UCSZ00); //one stop bit

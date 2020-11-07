@@ -6,7 +6,7 @@
  */ 
 
 #define  F_CPU   16000000UL
-#define  NUM_SHIFTIN_REG 7
+
 
 #define _NOTEON 0x90
 #define _NOTEOFF 0x80
@@ -23,12 +23,15 @@
 #include "ShiftRegister.h"
 #include "SN74HC165N.h"
 #include "SAMs_Micro_Function.h"
+#include "globalDefines.h"
 
 void sysexFinder(void);
 void scanPistons(void);
 void sendOutMidiStops(void);
 void midiCommandOut(char channel, char cmd, char pitch);
 void sendOutMidiPistons(void);
+
+void tempSendOutQueue(void);
 
 //for the pistonScanner
 unsigned char previousPiston[] = {0, 0, 0, 0};
@@ -38,17 +41,21 @@ unsigned char pistonDiff;
 
 //for the stopScanner
 unsigned char previousStop[NUM_SHIFTIN_REG];
+unsigned char updatedSAMs[NUM_SHIFTIN_REG];
+
+unsigned char decodeSAMs(void);
 
 struct cirQueue receivedData, transmitData;
 struct shiftOutReg downReg, upReg;
 struct shiftInReg stopReg;
 
+//this is to count things
 
 //This is the receive ISR
- ISR(USART1_RX_vect)
+ ISR(USART0_RX_vect)
 {
 	//do something here
-	enqueue(&receivedData, UDR1);
+	enqueue(&receivedData, UDR0);
 }
 
 //This is the transmitter ISR
@@ -56,7 +63,7 @@ ISR(USART1_UDRE_vect)
 {
 	//do something here
 
-	if(isEmpty(&transmitData)==0){
+	if(isEmpty(&transmitData)==1){
 	//data is empty, so stop the interrupt
 		TX1_INTERRUPT_OFF; //will this work?
 		
@@ -72,7 +79,9 @@ int main(void)
 	unsigned char dataB[] = {0x00, 0xFF, 0x00};
 	unsigned char dataC[] = {0x00, 0x00, 0xFF};
 	unsigned char dataClear[] = {0x00, 0x00, 0x00};
+	unsigned char newSAMS = 0;
 	
+	unsigned char tCount = 0, tCount2 =0;
 	setupQueue(&receivedData);
 	setupQueue(&transmitData);
 	DDRA = 0xFF;
@@ -87,15 +96,12 @@ int main(void)
 
 	
 	//set up shiftregiers
-	//shiftReg_output_init(&downReg, (char* volatile) &PORTA, (char* volatile)&PINA, 2, 1, 4, 3, 0);
-	
-	//shiftReg_output_init(&upReg, (char* volatile) &PORTC, (char* volatile)&PINC, 3, 0, 2, 5, 1);
-
+	shiftReg_output_init(&downReg, (char* volatile) &PORTA, (char* volatile)&PINA, 2, 1, 4, 3, 0);
+	shiftReg_output_init(&upReg, (char* volatile) &PORTC, (char* volatile)&PINC, 3, 0, 2, 5, 1);
 	shiftInReg_init(&stopReg, (char* volatile)&PORTC, (char* volatile)&PINC, (char* volatile)&DDRC, 4, 7, 6);
 
 	USART0_Init(BAUD_PRESCALE);
-	USART0_Transmit('a'); //test
-	//sei();
+	sei();
 	/* Replace with your application code */
 	
 
@@ -108,32 +114,45 @@ int main(void)
 	//testStubbornStop(&upReg, &downReg);
 	//flipStops(&upReg, &downReg);
 	//USART0_Transmit('b'); //test
-	//
-
+	
+	//Clear the flip tabs
+	clearStops(&upReg, &downReg);
+	
+	//test out the ability to flip da stops correctly
+// 	for (tCount2 = 0; tCount2<NUM_SHIFTIN_REG; tCount2++)
+// 	{
+// 		for( tCount=0; tCount<8; tCount++)
+// 		{
+// 			updatedSAMs[tCount2] = updatedSAMs[tCount2] | ( 1 << tCount);
+// 			updateStops(&upReg, &downReg,updatedSAMs);
+// 		}
+// 
+// 	}
+	
 	while (1) 
 	{
 	//scan the shift in registers
 
-
 	sendOutMidiStops();
-
 	scanPistons();
 	sendOutMidiPistons();
-	//USART0_Transmit(currentPiston[0]);
-	//USART0_Transmit(currentPiston[1]);
-	//USART0_Transmit(currentPiston[2]);
-	//USART0_Transmit(currentPiston[3]);
-	//USART0_Transmit(PINA);
-	//USART0_Transmit(PING);
-	//USART0_Transmit(13); //end of line
+	newSAMS = decodeSAMs();
+	if(newSAMS == 1)
+		updateStops(&upReg, &downReg,updatedSAMs);
+	newSAMS=0;
+	_delay_ms(5);
+	
 
-	_delay_ms(50);
-
-	//USART0_Transmit('a');
-	//USART0_Transmit(13);
+	
 			
 		
 	}
+}
+
+void tempSendOutQueue(void){
+	while(~isEmpty(&receivedData)){
+		USART0_Transmit(dequeue(&receivedData));
+	}	
 }
 
 void sendOutMidiStops(void)
@@ -141,10 +160,36 @@ void sendOutMidiStops(void)
 	unsigned char shiftInReg_data[NUM_SHIFTIN_REG];
 	unsigned char stopDiff;
 	unsigned char otherCounter;
+	unsigned char s19Swap, s22Swap;
 	//get the new data
 	shiftInReg_MultiByte(&stopReg, shiftInReg_data, NUM_SHIFTIN_REG);
-
-	//compare to the previous stops + send out at will.
+	
+	//USART0_Transmit(shiftInReg_data[2]);
+	//I have a hook up error with stop 19 and 23, let's fix that here
+	if((shiftInReg_data[2] & 0b00000100) == 0) // e.g. the 4ft flute is down 
+		s19Swap = 0;
+	else
+		s19Swap = 1;
+		
+	if((shiftInReg_data[2] & 0b01000000) == 0) // e.g. the 1ft flute is down
+		s22Swap = 0;
+	else
+		s22Swap = 1;
+	
+	// now that I know the states, correct the shiftInReg
+	if(s19Swap == 0)
+		shiftInReg_data[2] = shiftInReg_data[2] & 0b10111111;
+		//shiftInReg_data[2] =0;
+	else
+		shiftInReg_data[2] = shiftInReg_data[2] | 0b01000000;
+	
+	if(s22Swap == 0)
+		shiftInReg_data[2] = shiftInReg_data[2] & 0b11111011;
+	else
+		shiftInReg_data[2] = shiftInReg_data[2] | 0b00000100;
+	//USART0_Transmit(shiftInReg_data[2]);
+	
+	//compare to the previous sops + send out at will.
 	for(int count = 0; count < NUM_SHIFTIN_REG; count++)
 	{
 		stopDiff = shiftInReg_data[count] ^ previousStop[count];
@@ -163,8 +208,7 @@ void sendOutMidiStops(void)
 				}
 			}
 
-		}
-		
+		}	
 		
 	}
 
@@ -172,6 +216,7 @@ void sendOutMidiStops(void)
 	for(int count = 0; count < NUM_SHIFTIN_REG; count++)
 	{
 		previousStop[count] = shiftInReg_data[count];
+		updatedSAMs[count] = ~shiftInReg_data[count];
 	}
 
 }
@@ -188,22 +233,88 @@ void midiCommandOut(char channel, char cmd, char pitch){
 	USART0_Transmit(_DEFAULTVELOCITY);
 }
 
-void decodeSAMs(void){
+unsigned char decodeSAMs(void){
 	
-	while(isEmpty(&receivedData)){ //logic is crappy from the isEmpty
+	// Let's do a state machine
+	// Three messages, the "first part"
+	// the pitch
+	// the default velocity
+	// We always know what the "first part" will be
+	
+	// recall that previousStop has the current stop values.
+	unsigned char message, onOrOff,stopDiff,note,c,count, go, shouldReturnOne=0;
+	
+	
 
-		dequeue(&receivedData);
+	//state machine
+	//first check if I have a full message
+	while(queueDepth(&receivedData) >=3){
 
-	}
+        message = dequeue(&receivedData);
+
+        //check if it's a on or off message
+        go = 0;
+		// check if it's a wired message
+	    if((message&0xF0)==0x80){
+            go = 1;
+		} else if((message&0xF0)==0x90){
+            go = 1;
+		}
+        if(go == 0){
+            // then we know we didn't get the correct message
+           
+        }else{
+            onOrOff = (message&0x10) >> 4;
+            note = dequeue(&receivedData); //get the next byte
+			note = note-1;
+			if(note == 0)
+				count = 0;
+ 			else if (note == 18)
+ 				note == 22;
+			else if (note == 22)
+ 				note == 18;
+				
+			count = note/8; // this should work, int math
+            //safety
+            if(count > NUM_SHIFTIN_REG){
+                count = NUM_SHIFTIN_REG;
+            }else if(count < 0){
+                count = 0;
+            }
+        
+            note = note % 8;
+            c = 1 << note;
+//              USART0_Transmit('c');
+//              USART0_Transmit(count);
+//              USART0_Transmit(c);
+
+
+            if(onOrOff == 1) {
+            //stop on
+            //update the array
+                updatedSAMs[count] = updatedSAMs[count]|c;
+            }else{
+            //stop off
+            //update the array
+                updatedSAMs[count] = updatedSAMs[count]&(~c);
+            }
+            
+            
+            message = dequeue(&receivedData); // this is the velocity, we don't care
+			shouldReturnOne =1;
+            _delay_us(1);
+			}
+			}
+		
+	
+return shouldReturnOne;
 }
 
-unsigned char previousShiftInStops[NUM_SHIFTIN_REG];
 
-//void stopShiftIn_to_MIDI(unsigned char data[], unsigned char numberBytes, cirQueue *outQueue)
-//{
-		//
-//
-//}
+
+
+
+
 
 
  /************************************************************************/
@@ -271,10 +382,6 @@ unsigned char previousShiftInStops[NUM_SHIFTIN_REG];
 		}
 	}
 
-
-
-
-
 	//set the prevoious stops to current
 	for(int count = 0; count < 4; count++)
 	{
@@ -284,7 +391,7 @@ unsigned char previousShiftInStops[NUM_SHIFTIN_REG];
  }
 
 
-//This is for another project that I got side tracked on. Ignore
+//This is for another project that I got side tracked on. Ignore 
 void sysexFinder(void){
 
 	const unsigned char bitVal[] = {2, 3, 0, 1, 5, 6, 1, 3,

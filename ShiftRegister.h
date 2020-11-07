@@ -29,7 +29,7 @@ struct shiftOutReg {
 	char volatile *port;
 };
 
-#define SAM_WAIT_TIME 75
+#define SAM_WAIT_TIME 200
 
 
 
@@ -44,6 +44,10 @@ void shiftReg_loadData3(struct shiftOutReg *s, unsigned char data[]);
 void shiftReg_loadShiftRegs(struct shiftOutReg *s, unsigned char data[]);
 void shiftReg_loadStops(struct shiftOutReg *s, unsigned char data[]);
 void flipStops(struct shiftOutReg *up, struct shiftOutReg *down);
+void clearStops(struct shiftOutReg *up, struct shiftOutReg *down);
+
+void updateStops(struct shiftOutReg *up, struct shiftOutReg *down, unsigned char updatedSAM[]);
+
 void testStubbornStop(struct shiftOutReg *up, struct shiftOutReg *down);
 
 

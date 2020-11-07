@@ -10,10 +10,12 @@
  void setupQueue(struct cirQueue *q){
 	q->qFront = &q->theQueue[0];
 	q->qRear = &q->theQueue[0];
+	q->queueDepth = 0;
  }
 
  void enqueue(struct cirQueue *q, char c)
  {
+	q->queueDepth++;
 	*q->qFront = c;
 
 	if(q->qFront >= &q->theQueue[100])
@@ -24,11 +26,14 @@
 
  char dequeue(struct cirQueue *q)
  {
+	//it's up to the user to make sure that the queue is not empty before calling
 	char temp;
 	//check if you can deqeue
-	while(isEmpty(q)==0){
-		_delay_us(1); //#fixme, will not seem to work with out the delay, can I do somthing shorter like nop?
-	}
+	
+	if(q->queueDepth == 0)
+		return 0;
+	
+	q->queueDepth--;
 
 	temp = *q->qRear;
 	if(q->qRear >= &q->theQueue[100])
@@ -41,9 +46,14 @@
 
  char isEmpty(struct cirQueue *q){
 	if(q->qFront == q->qRear){
-		return 0;
-	}
-	else{
 		return 1;
 	}
+	else{
+		return 0;
+	}
+ }
+ 
+ char queueDepth(struct cirQueue *q){
+	 
+	 return q->queueDepth;
  }

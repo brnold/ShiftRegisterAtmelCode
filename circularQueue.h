@@ -10,10 +10,11 @@
 #ifndef CIRCULARQUEUE_H_
 #define CIRCULARQUEUE_H_
 
-#define QUEUE_SIZE 100
+#define QUEUE_SIZE 2000
 struct cirQueue{
 	unsigned char theQueue[QUEUE_SIZE];
 	volatile char *qFront, *qRear;
+	volatile unsigned char queueDepth;
 };
 
 
@@ -21,6 +22,7 @@ void setupQueue(struct cirQueue *q);
 void enqueue(struct cirQueue *q, char c);
 char dequeue(struct cirQueue *q);
 char isEmpty(struct cirQueue *q);
+char queueDepth(struct cirQueue *q);
 
 
 
