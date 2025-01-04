@@ -280,20 +280,15 @@
  /************************************************************************/
  /* This updates the SAMs based on what's on, and what want's to be on    */
  /************************************************************************/
-void updateStops(struct shiftOutReg *up, struct shiftOutReg *down, unsigned char updatedSAM[]){
+void updateStops(struct shiftOutReg *up, struct shiftOutReg *down, unsigned char toClearSAMs[], unsigned char toSetSAMs[]){
 	unsigned char numRegisters=6;
-	unsigned char zeros[6] ={0,0,0,0,0,0,0};
-	unsigned char toClear[NUM_SHIFTIN_REG],toSet[NUM_SHIFTIN_REG];
+	//unsigned char zeros[6] ={0,0,0,0,0,0,0};
+	//unsigned char toClear[NUM_SHIFTIN_REG],toSet[NUM_SHIFTIN_REG];
 	
-	for(unsigned char c = 0; c< NUM_SHIFTIN_REG; c++)
-	{
-		toClear[c] = ~updatedSAM[c];
-		toSet[c] = updatedSAM[c];
-	}
-
-	shiftReg_loadShiftRegs(up, toClear);
-	shiftReg_loadShiftRegs(down, updatedSAM);
+	shiftReg_loadShiftRegs(down, toClearSAMs);
+	shiftReg_loadShiftRegs(up, toSetSAMs);
 	_delay_ms(SAM_WAIT_TIME);
+
 	shiftReg_Clear_Output(up);
 	shiftReg_Clear_Output(down);
 

@@ -42,6 +42,8 @@ unsigned char pistonDiff;
 //for the stopScanner
 unsigned char previousStop[NUM_SHIFTIN_REG];
 unsigned char updatedSAMs[NUM_SHIFTIN_REG];
+unsigned char toClearSAMs[NUM_SHIFTIN_REG];
+unsigned char toSetSAMs[NUM_SHIFTIN_REG];
 
 unsigned char decodeSAMs(void);
 
@@ -138,9 +140,9 @@ int main(void)
 	sendOutMidiPistons();
 	newSAMS = decodeSAMs();
 	if(newSAMS == 1)
-		updateStops(&upReg, &downReg,updatedSAMs);
+		updateStops(&upReg, &downReg,toSetSAMs, toClearSAMs);
 	newSAMS=0;
-	_delay_ms(5);
+	//_delay_us(5);
 	
 
 	
@@ -244,6 +246,11 @@ unsigned char decodeSAMs(void){
 	// recall that previousStop has the current stop values.
 	unsigned char message, onOrOff,stopDiff,note,c,count, go, shouldReturnOne=0;
 	
+	for(char i=0; i<NUM_SHIFTIN_REG; i++)
+	{
+		toSetSAMs[i] = 0x000;
+		toClearSAMs[i] = 0X00;
+	}
 	
 
 	//state machine
@@ -284,25 +291,22 @@ unsigned char decodeSAMs(void){
         
             note = note % 8;
             c = 1 << note;
-//              USART0_Transmit('c');
-//              USART0_Transmit(count);
-//              USART0_Transmit(c);
-
 
             if(onOrOff == 1) {
             //stop on
             //update the array
-                updatedSAMs[count] = updatedSAMs[count]|c;
+                toSetSAMs[count] = toSetSAMs[count]|c;
             }else{
             //stop off
             //update the array
-                updatedSAMs[count] = updatedSAMs[count]&(~c);
+			
+                toClearSAMs[count] = toClearSAMs[count]|c;
             }
             
             
             message = dequeue(&receivedData); // this is the velocity, we don't care
 			shouldReturnOne =1;
-            _delay_us(1);
+            //_delay_us(1);
 			}
 			}
 		
